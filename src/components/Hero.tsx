@@ -1,10 +1,15 @@
 "use client";
 
-import { motion, Variants } from "framer-motion";
+import { motion, Variants, useScroll, useTransform, useSpring } from "framer-motion";
 import { Button } from "./ui/Button";
 import { ChevronDown, ArrowUpRight } from "lucide-react";
 
 export function Hero() {
+  const { scrollY } = useScroll();
+
+  // Creates a parallax effect: as user scrolls down by 1000px, this section moves down by 750px (moving much slower than the rest of the page)
+  const y = useTransform(scrollY, [0, 1000], [0, 750]);
+
   // Stagger variants for the main text elements
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -29,7 +34,10 @@ export function Hero() {
   return (
     // Mobile: Auto height with balanced padding so the hill image is visible in the first frame
     // Desktop: auto height
-    <section className="relative w-full pt-[180px] md:pt-[300px] pb-[150px] md:pb-[50px] lg:pb-[70px] flex flex-col items-center justify-center md:justify-start z-20">
+    <motion.section
+      style={{ y }}
+      className="relative w-full pt-[180px] md:pt-[300px] pb-[150px] md:pb-[50px] lg:pb-[70px] flex flex-col items-center justify-center md:justify-start z-0 will-change-transform"
+    >
 
       {/* Decorative Parallax Background Elements */}
       <motion.div
@@ -94,6 +102,6 @@ export function Hero() {
           </Button>
         </motion.div>
       </motion.div>
-    </section>
+    </motion.section>
   );
 }

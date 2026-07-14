@@ -3,67 +3,63 @@
 import { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
+import { useLiquidGlass } from "../lib/useLiquidGlass";
 
 /**
  * Navbar — iOS 26+ Liquid Glass Effect
  * 
- * Architecture inspired by CYLTabBarController's native platter system:
- *   PlatterView (container)
- *     └─ LiquidLensBackdropView  (backdrop-filter: blur — the frosted layer)
- *     └─ LiquidLensClearGlassView (specular border + inset glow — the glass surface)
- *     └─ ContentView (tab buttons — crisp text, no filter distortion)
- * 
- * The SVG displacement filter is applied ONLY to the BackdropView,
- * keeping all text 100% sharp (matching CYLTabBarController's approach
- * of separating the liquid lens from the content view).
- * 
- * Design spec from Figma:
- *   Mobile (390px): 302×52, top-[63px], centered, pill tabs only (no CTA)
- *   Desktop (md+): Left group + "Let's talk" CTA button
+ * Rebuilt using dynamic Liquid Glass Canvas Refraction map generation.
  */
 export function Navbar() {
   const [activeTab, setActiveTab] = useState(0);
   const backdropRef = useRef<HTMLDivElement>(null);
 
+
+  // Hook for Liquid Glass effect dynamically sizing with the nav platter
+  const { filterData, blurAmount, specularOpacity, specularSaturation } = useLiquidGlass(backdropRef, {
+    borderRadius: 9999,    // Match pill shape (rounded-[999px])
+    glassThickness: 80,    // Defines how much it magnifies/refracts
+    bezelWidth: 20,        // Adjust edge bevel size for smaller height of navbar
+    refractiveIndex: 2.0,  // Subtle distortion for better readability
+    blurAmount: 1.5,       // Subtle blur
+    specularOpacity: 0.5,  // Intensity of the gloss highlights
+    specularSaturation: 4, // Colors boosted in specular layer
+    scaleRatio: 1.0,
+    surfaceShape: "convex_squircle",
+  });
+
+
+
   const tabs = [
-    { label: "Home", id: "home" },
-    { label: "My Works", id: "works" },
+    { label: "Home", id: "hero" },
+    { label: "My Works", id: "projects" },
     { label: "About me", id: "about" },
   ];
 
-  // Scroll-to-section on tab click
   const handleTabClick = (index: number) => {
     setActiveTab(index);
-    const sectionIds = ["hero", "projects", "about"];
-    const el = document.getElementById(sectionIds[index]);
+    const el = document.getElementById(tabs[index].id);
     if (el) el.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Update active tab on scroll
   useEffect(() => {
-    const sectionIds = ["hero", "projects", "about"];
-    
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            const index = sectionIds.indexOf(entry.target.id);
+            const index = tabs.findIndex(t => t.id === entry.target.id);
             if (index !== -1) {
               setActiveTab(index);
             }
           }
         });
       },
-      {
-        // Trigger when the section reaches the upper 30% to 70% of the screen
-        rootMargin: "-30% 0px -70% 0px"
-      }
+      { rootMargin: "-30% 0px -70% 0px" }
     );
 
-    // Slight delay to ensure DOM is fully painted with IDs
     const timeoutId = setTimeout(() => {
-      sectionIds.forEach((id) => {
-        const el = document.getElementById(id);
+      tabs.forEach((tab) => {
+        const el = document.getElementById(tab.id);
         if (el) observer.observe(el);
       });
     }, 100);
@@ -76,39 +72,38 @@ export function Navbar() {
 
   return (
     <>
-      {/* ═══════════════ SVG FILTER (global, rendered once) ═══════════════ */}
+      {/* ═══════════════ SVG FILTER (dynamic from Liquid Glass) ═══════════════ */}
       <svg
         width="0"
         height="0"
         aria-hidden="true"
         style={{ position: "absolute", pointerEvents: "none" }}
+        colorInterpolationFilters="sRGB"
       >
         <defs>
-          <filter id="liquid-glass-refraction">
-            {/* Very subtle Perlin noise for gentle liquid shimmer */}
-            <feTurbulence
-              type="turbulence"
-              baseFrequency="0.005 0.009"
-              numOctaves="1"
-              result="noise"
-            >
-              {/* Slow animated shimmer — barely perceptible, like real glass */}
-              <animate
-                attributeName="baseFrequency"
-                values="0.005 0.009; 0.005 0.009; 0.005 0.009"
-                dur="20s"
-                repeatCount="indefinite"
+          {filterData ? (
+            <filter id="liquid-glass-refraction" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation={blurAmount} result="blurred_source" />
+              <feImage href={filterData.dispUrl} x="0" y="0" width={filterData.w} height={filterData.h} result="disp_map" />
+              <feDisplacementMap
+                in="blurred_source"
+                in2="disp_map"
+                scale={filterData.scale}
+                xChannelSelector="R"
+                yChannelSelector="G"
+                result="displaced"
               />
-            </feTurbulence>
-            {/* scale=2 — extremely subtle refraction, clean and clear */}
-            <feDisplacementMap
-              in="SourceGraphic"
-              in2="noise"
-              scale="2"
-              xChannelSelector="R"
-              yChannelSelector="G"
-            />
-          </filter>
+              <feColorMatrix in="displaced" type="saturate" values={String(specularSaturation)} result="displaced_sat" />
+              <feImage href={filterData.specUrl} x="0" y="0" width={filterData.w} height={filterData.h} result="spec_layer" />
+              <feComposite in="displaced_sat" in2="spec_layer" operator="in" result="spec_masked" />
+              <feComponentTransfer in="spec_layer" result="spec_faded">
+                <feFuncA type="linear" slope={specularOpacity} />
+              </feComponentTransfer>
+              <feBlend in="spec_masked" in2="displaced" mode="normal" result="with_sat" />
+              <feBlend in="spec_faded" in2="with_sat" mode="normal" />
+            </filter>
+          ) : null}
+
         </defs>
       </svg>
 
@@ -120,41 +115,39 @@ export function Navbar() {
         className="fixed left-1/2 -translate-x-1/2 top-[16px] md:top-[24px] z-50 flex items-center gap-[16px]"
       >
         {/* ──────── LEFT GROUP: PlatterView (Tab Bar) ──────── */}
-        <div className="relative rounded-[999px]">
+        <div className="relative rounded-[999px] shadow-none">
           {/* 
             Layer 1: LiquidLensBackdropView
             The frosted blur layer that refracts content behind it.
-            This is the ONLY element that receives the SVG displacement filter.
           */}
           <div
             ref={backdropRef}
-            className="absolute inset-0 rounded-[999px] backdrop-blur-[1px] will-change-transform"
+            className="absolute inset-0 rounded-[999px]"
             style={{
-              filter: "url(#liquid-glass-refraction)",
-              WebkitBackdropFilter: "blur(10px)",
+              // Fallback to standard blur before canvas calculates displacement map
+              backdropFilter: filterData ? "url(#liquid-glass-refraction)" : "blur(20px)",
+              WebkitBackdropFilter: filterData ? "url(#liquid-glass-refraction)" : "blur(20px)",
+              willChange: "transform, backdrop-filter",
               transform: "translateZ(0)",
+              isolation: "isolate",
             }}
           />
 
           {/* 
-            Layer 2: LiquidLensClearGlassView
-            The specular glass surface — semi-transparent bg, satin border, 
-            inset highlight shadow. NO SVG filter on this layer.
+            Layer 1.5: Tint Layer 
+            Subtle color overlay + inner shadow for glass reflection
           */}
           <div
-            className="absolute inset-0 rounded-[999px]"
+            className="absolute inset-0 rounded-[999px] pointer-events-none z-[1]"
             style={{
-              background: "rgba(255, 255, 255, 0.08)",
-              border: "1px solid rgba(255, 255, 255, 0.18)",
-              boxShadow:
-                "0 4px 16px 0 rgba(0, 0, 0, 0.10), inset 0 1px 0 0 rgba(255, 255, 255, 0.25)",
+              backgroundColor: "rgba(255, 255, 255, 0.06)",
+              boxShadow: "inset 0 0 20px -5px rgba(255, 255, 255, 0.45)",
             }}
           />
 
           {/* 
             Layer 3: ContentView  
             The actual tab buttons. No filter, no blur — 100% crisp text.
-            Matches Figma: gap-[15px], p-[8px]
           */}
           <div className="relative z-10 flex items-center gap-[15px] p-[8px]">
             {tabs.map((tab, i) => (
@@ -169,7 +162,7 @@ export function Navbar() {
                   "transition-colors duration-200 cursor-pointer",
                   i === activeTab
                     ? "bg-[rgba(248,250,252,0.25)]"
-                    : "bg-transparent drop-shadow-[0px_1px_1px_rgba(16,24,40,0.05)] hover:bg-[rgba(248,250,252,0.10)]",
+                    : "bg-transparent drop-shadow-[0px_1px_1px_rgba(16,24,40,0.0)] hover:bg-[rgba(248,250,252,0.10)]",
                 ].join(" ")}
               >
                 {tab.label}
@@ -178,14 +171,14 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* ──────── RIGHT GROUP: CTA Button — hidden on mobile per Figma ──────── */}
+        {/* ──────── RIGHT GROUP: CTA Button ──────── */}
         <div className="hidden md:flex items-center p-[8px]">
           <button
             className={[
               "flex items-center justify-center gap-[8px]",
               "px-[14px] py-[8px] rounded-[999px]",
               "bg-[#f1f5f9] border border-[#f1f5f9]",
-              "shadow-[0px_1px_2px_0px_rgba(16,24,40,0.05)]",
+              "shadow-none",
               "font-['Inter'] font-medium text-[14px] leading-[20px]",
               "text-[#334155] whitespace-nowrap",
               "hover:bg-white transition-colors duration-200 cursor-pointer",
