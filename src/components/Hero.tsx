@@ -7,8 +7,8 @@ import { ChevronDown, ArrowUpRight } from "lucide-react";
 export function Hero() {
   const { scrollY } = useScroll();
 
-  // Creates a parallax effect: as user scrolls down by 1000px, this section moves down by 750px (moving much slower than the rest of the page)
-  const y = useTransform(scrollY, [0, 1000], [0, 750]);
+  // Creates a subtle parallax effect: as user scrolls down by 1000px, this section moves down by 900px
+  const rawY = useTransform(scrollY, [0, 1000], [0, 900]);
 
   // Stagger variants for the main text elements
   const containerVariants: Variants = {
@@ -35,7 +35,7 @@ export function Hero() {
     // Mobile: Auto height with balanced padding so the hill image is visible in the first frame
     // Desktop: auto height
     <motion.section
-      style={{ y }}
+      style={{ y: rawY }}
       className="relative w-full pt-[180px] md:pt-[300px] pb-[150px] md:pb-[50px] lg:pb-[70px] flex flex-col items-center justify-center md:justify-start z-0 will-change-transform"
     >
 

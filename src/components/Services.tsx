@@ -131,8 +131,6 @@ export function Services() {
   return (
     <section className="relative w-full pb-8 md:pb-16 px-[30px] md:px-4 flex flex-col items-center justify-center bg-transparent z-10">
 
-      {/* Background Glow */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[300px] h-[300px] md:w-[600px] md:h-[600px] bg-blue-500/20 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-[1216px] flex flex-col items-center gap-[8px] md:gap-[24px]">
 

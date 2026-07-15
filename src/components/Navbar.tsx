@@ -28,8 +28,6 @@ export function Navbar() {
     surfaceShape: "convex_squircle",
   });
 
-
-
   const tabs = [
     { label: "Home", id: "hero" },
     { label: "My Works", id: "projects" },
@@ -82,7 +80,7 @@ export function Navbar() {
       >
         <defs>
           {filterData ? (
-            <filter id="liquid-glass-refraction" x="-20%" y="-20%" width="140%" height="140%">
+            <filter id="liquid-glass-refraction" x="0%" y="0%" width="100%" height="100%">
               <feGaussianBlur in="SourceGraphic" stdDeviation={blurAmount} result="blurred_source" />
               <feImage href={filterData.dispUrl} x="0" y="0" width={filterData.w} height={filterData.h} result="disp_map" />
               <feDisplacementMap
