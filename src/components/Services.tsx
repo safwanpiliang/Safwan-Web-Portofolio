@@ -1,105 +1,29 @@
 "use client";
 
-import { useRef } from "react";
 import { motion, Variants } from "framer-motion";
-import { useLiquidGlass } from "../lib/useLiquidGlass";
+import { ScrambleText } from "./ScrambleText";
 
 function ServiceCard({ card, idx, cardVariants }: { card: any, idx: number, cardVariants: Variants }) {
-  const backdropRef = useRef<HTMLDivElement>(null);
-  const filterId = `liquid-glass-services-${idx}`;
-
-  // Use a smaller bezel and radius for cards compared to the navbar
-  const { filterData, blurAmount, specularOpacity, specularSaturation } = useLiquidGlass(backdropRef, {
-    borderRadius: 16,      // Card corner radius
-    glassThickness: 50,    // Refraction intensity
-    bezelWidth: 15,        // Edge bevel
-    refractiveIndex: 1.8,  // Less distortion for card text readability
-    blurAmount: 1.5,       // Increased blur for a more frosted glass look
-    specularOpacity: 0.3,
-    specularSaturation: 2,
-    scaleRatio: 1.0,
-    surfaceShape: "convex_squircle",
-  });
-
   return (
     <div className="w-full h-full relative">
-      {/* SVG FILTER for this specific card */}
-      <svg
-        width="0"
-        height="0"
-        aria-hidden="true"
-        style={{ position: "absolute", pointerEvents: "none" }}
-        colorInterpolationFilters="sRGB"
-      >
-        <defs>
-          {filterData ? (
-            <filter id={filterId} x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation={blurAmount} result="blurred_source" />
-              <feImage href={filterData.dispUrl} x="0" y="0" width={filterData.w} height={filterData.h} result="disp_map" />
-              <feDisplacementMap
-                in="blurred_source"
-                in2="disp_map"
-                scale={filterData.scale}
-                xChannelSelector="R"
-                yChannelSelector="G"
-                result="displaced"
-              />
-              <feColorMatrix in="displaced" type="saturate" values={String(specularSaturation)} result="displaced_sat" />
-              <feImage href={filterData.specUrl} x="0" y="0" width={filterData.w} height={filterData.h} result="spec_layer" />
-              <feComposite in="displaced_sat" in2="spec_layer" operator="in" result="spec_masked" />
-              <feComponentTransfer in="spec_layer" result="spec_faded">
-                <feFuncA type="linear" slope={specularOpacity} />
-              </feComponentTransfer>
-              <feBlend in="spec_masked" in2="displaced" mode="normal" result="with_sat" />
-              <feBlend in="spec_faded" in2="with_sat" mode="normal" />
-            </filter>
-          ) : null}
-        </defs>
-      </svg>
-
       <motion.div
         variants={cardVariants}
         whileHover={{ scale: 1.02 }}
-        className="relative flex flex-col items-start rounded-[16px] shadow-lg transition-transform cursor-default h-full w-full"
+        className="bg-white flex flex-col gap-[16px] items-start p-[20px] md:p-[24px] rounded-[8px] w-full h-full shadow-sm cursor-default"
       >
-        {/* Layer 1: Liquid Lens Backdrop */}
-        <div
-          ref={backdropRef}
-          className="absolute inset-0 rounded-[16px] will-change-transform"
-          style={{
-            backdropFilter: filterData ? `url(#${filterId})` : "blur(20px)",
-            WebkitBackdropFilter: filterData ? `url(#${filterId})` : "blur(20px)",
-            transform: "translateZ(0)",
-            isolation: "isolate",
-          }}
-        />
-
-        {/* Layer 1.5: Tint and Specular Border */}
-        <div
-          className="absolute inset-0 rounded-[16px] pointer-events-none z-[1]"
-          style={{
-            backgroundColor: "rgba(255, 255, 255, 0.05)",
-            boxShadow: "inset 0 0 15px -5px rgba(255, 255, 255, 0.2)",
-            border: "1px solid rgba(255,255,255,0.12)",
-          }}
-        />
-
-        {/* Layer 2: Content */}
-        <div className="relative z-10 flex flex-col gap-[12px] md:gap-[16px] p-[18px] md:p-[24px]">
-          <div className="flex gap-[7px] md:gap-[10px] items-center w-full">
-            <h3 className="font-montserrat font-bold text-[18px] md:text-[24px] text-slate-100 whitespace-nowrap">
-              {card.title}
-            </h3>
-            <div className="bg-[#ffab2f] px-[7px] py-[2px] md:px-[8px] md:py-[4px] rounded-full flex items-center justify-center shadow-sm">
-              <span className="font-inter font-normal md:font-medium text-[10px] md:text-[13px] text-white md:text-slate-900 tracking-[0.16px]">
-                {card.count}
-              </span>
-            </div>
+        <div className="flex gap-[10px] items-center w-full flex-wrap sm:flex-nowrap">
+          <h3 className="font-montserrat font-bold text-[20px] sm:text-[24px] text-slate-700 whitespace-nowrap">
+            {card.title}
+          </h3>
+          <div className="bg-[#ffab2f] px-[10px] py-[3px] rounded-[16px] flex items-center shrink-0">
+            <span className="font-inter font-normal text-[12px] sm:text-[13px] text-white tracking-[0.16px]">
+              {card.count}
+            </span>
           </div>
-          <p className="font-montserrat text-[12px] md:text-[16px] text-slate-100 md:text-slate-300 leading-normal md:leading-relaxed">
-            {card.desc}
-          </p>
         </div>
+        <p className="font-montserrat font-normal text-[14px] sm:text-[16px] text-slate-700 leading-[1.5] w-full">
+          {card.desc}
+        </p>
       </motion.div>
     </div>
   );
@@ -144,7 +68,7 @@ export function Services() {
           className="text-center w-full flex flex-wrap justify-center gap-x-[8px] md:gap-x-[16px] items-center mb-0 md:mb-8"
         >
           <span className="font-montserrat font-bold text-[40px] md:text-[48px] lg:text-[64px] text-slate-100">Let&apos;s</span>
-          <span className="font-doto font-black text-[40px] md:text-[48px] lg:text-[64px] text-slate-100">Build</span>
+          <span className="font-doto font-black text-[40px] md:text-[48px] lg:text-[64px] text-slate-100"><ScrambleText text="Build" /></span>
           <span className="font-montserrat font-bold text-[40px] md:text-[48px] lg:text-[64px] text-slate-100">together</span>
         </motion.div>
 

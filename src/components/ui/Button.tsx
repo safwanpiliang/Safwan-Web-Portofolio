@@ -22,7 +22,7 @@ export function Button({
   // Figma mobile: px-[14px] py-[8px], 14px Inter Medium, leading-[20px]
   // Desktop: px-[18px] py-[10px], 16px, leading-[24px]
   const baseStyles =
-    "flex gap-[8px] items-center justify-center overflow-hidden px-[14px] py-[8px] md:px-[18px] md:py-[10px] relative rounded-[999px] font-inter font-medium leading-[20px] md:leading-[24px] text-[14px] md:text-[16px] whitespace-nowrap transition-colors";
+    "flex gap-[6px] md:gap-[8px] items-center justify-center overflow-hidden px-[12px] py-[6px] md:px-[18px] md:py-[10px] relative rounded-[999px] font-inter font-medium leading-[18px] md:leading-[24px] text-[12px] md:text-[16px] whitespace-nowrap transition-colors";
 
   const variants = {
     white: "bg-slate-100 text-slate-700 shadow-[0px_1px_2px_0px_rgba(16,24,40,0.05)] border border-slate-100 hover:bg-white",

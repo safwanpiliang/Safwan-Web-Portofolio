@@ -1,32 +1,101 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, useScroll, useMotionValueEvent, useTransform, useMotionValue } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
-import { useLiquidGlass } from "../lib/useLiquidGlass";
 
-/**
- * Navbar — iOS 26+ Liquid Glass Effect
- * 
- * Rebuilt using dynamic Liquid Glass Canvas Refraction map generation.
- */
+function NavButton({ tab, isActive, isScrolled, effectiveScroll, onClick }: { tab: { label: string, id: string }, isActive: boolean, isScrolled: boolean, effectiveScroll: any, onClick: () => void }) {
+  const scrollRange = [0, 200];
+  
+  const bgActive = useTransform(effectiveScroll, scrollRange, ["rgba(255, 255, 255, 0.15)", "rgba(203, 213, 225, 0.4)"]);
+  const textColorActive = useTransform(effectiveScroll, scrollRange, ["rgb(255, 255, 255)", "rgb(15, 23, 42)"]); // white to slate-900
+  const textColorInactive = useTransform(effectiveScroll, scrollRange, ["rgb(203, 213, 225)", "rgb(71, 85, 105)"]); // slate-300 to slate-600
+
+  const color = isActive ? textColorActive : textColorInactive;
+
+  return (
+    <motion.div className="relative rounded-[999px] flex items-center justify-center">
+      {/* Background Layer */}
+      <motion.div
+        style={{ 
+          backgroundColor: isActive ? bgActive : "transparent"
+        }}
+        className="absolute inset-0 rounded-[999px] pointer-events-none z-[1]"
+      />
+      
+      {/* Content */}
+      <motion.button
+        onClick={onClick}
+        style={{ color }}
+        whileHover={{ color: isScrolled ? "rgb(15, 23, 42)" : "rgb(255, 255, 255)" }}
+        className="relative z-10 flex items-center justify-center gap-[8px] px-[12px] py-[6px] md:px-[14px] md:py-[8px] rounded-[999px] font-['Inter'] font-medium text-[12px] md:text-[14px] leading-[20px] whitespace-nowrap cursor-pointer transition-colors duration-200"
+      >
+        {tab.label}
+      </motion.button>
+    </motion.div>
+  );
+}
+
 export function Navbar() {
   const [activeTab, setActiveTab] = useState(0);
-  const backdropRef = useRef<HTMLDivElement>(null);
+  const { scrollY } = useScroll();
+  const effectiveScroll = useMotionValue(0);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) {
+        effectiveScroll.set(200);
+      } else {
+        effectiveScroll.set(scrollY.get());
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, [effectiveScroll, scrollY]);
 
-  // Hook for Liquid Glass effect dynamically sizing with the nav platter
-  const { filterData, blurAmount, specularOpacity, specularSaturation } = useLiquidGlass(backdropRef, {
-    borderRadius: 9999,    // Match pill shape (rounded-[999px])
-    glassThickness: 80,    // Defines how much it magnifies/refracts
-    bezelWidth: 20,        // Adjust edge bevel size for smaller height of navbar
-    refractiveIndex: 2.0,  // Subtle distortion for better readability
-    blurAmount: 1.5,       // Subtle blur
-    specularOpacity: 0.5,  // Intensity of the gloss highlights
-    specularSaturation: 4, // Colors boosted in specular layer
-    scaleRatio: 1.0,
-    surfaceShape: "convex_squircle",
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    if (isMobile) {
+      effectiveScroll.set(200);
+    } else {
+      effectiveScroll.set(latest);
+    }
   });
+
+  useMotionValueEvent(effectiveScroll, "change", (latest) => {
+    setIsScrolled(latest > 100);
+  });
+
+  const scrollRange = [0, 200];
+  
+  // Container
+  const navPaddingPx = useTransform(effectiveScroll, scrollRange, [16, 0]);
+  const navPadding = useTransform(navPaddingPx, v => `${v}px`);
+
+  // Spacer between left and right groups
+  const spacerFlex = useTransform(effectiveScroll, scrollRange, [1, 0]);
+
+  // Group wrappers (tabs and CTA)
+  const groupBg = useTransform(effectiveScroll, scrollRange, ["rgba(241, 245, 249, 0)", "rgba(241, 245, 249, 1)"]);
+  const groupPaddingPx = useTransform(effectiveScroll, scrollRange, [0, 8]);
+  const groupPadding = useTransform(groupPaddingPx, v => `${v}px`);
+
+  // CTA button styles inside its wrapper
+  const ctaBg = useTransform(effectiveScroll, scrollRange, ["rgba(241, 245, 249, 1)", "rgba(241, 245, 249, 0)"]);
+  const ctaColor = useTransform(effectiveScroll, scrollRange, ["rgb(51, 65, 85)", "rgb(71, 85, 105)"]);
+  const ctaPaddingSidePx = useTransform(effectiveScroll, scrollRange, [16, 14]);
+  const ctaPaddingSide = useTransform(ctaPaddingSidePx, v => `${v}px`);
+  const ctaGapPx = useTransform(effectiveScroll, scrollRange, [8, 0]);
+  const ctaGap = useTransform(ctaGapPx, v => `${v}px`);
+
+  // CTA text
+  const ctaTextWidthPx = useTransform(effectiveScroll, scrollRange, [65, 0]);
+  const ctaTextWidth = useTransform(ctaTextWidthPx, v => `${v}px`);
+  const ctaTextOpacity = useTransform(effectiveScroll, scrollRange, [1, 0]);
 
   const tabs = [
     { label: "Home", id: "hero" },
@@ -41,153 +110,118 @@ export function Navbar() {
   };
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const index = tabs.findIndex(t => t.id === entry.target.id);
-            if (index !== -1) {
-              setActiveTab(index);
-            }
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.body.offsetHeight;
+
+      // If we are at the bottom of the page (within 50px), activate the last tab
+      if (scrollPosition + windowHeight >= documentHeight - 50) {
+        setActiveTab(tabs.length - 1);
+        return;
+      }
+
+      // Otherwise, find the last section whose top is above the middle of the viewport
+      let newActiveIndex = 0;
+      for (let i = tabs.length - 1; i >= 0; i--) {
+        const el = document.getElementById(tabs[i].id);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          // If the top of the element is above the middle of the screen
+          if (rect.top <= windowHeight * 0.5) {
+            newActiveIndex = i;
+            break;
           }
-        });
-      },
-      { rootMargin: "-30% 0px -70% 0px" }
-    );
-
-    const timeoutId = setTimeout(() => {
-      tabs.forEach((tab) => {
-        const el = document.getElementById(tab.id);
-        if (el) observer.observe(el);
-      });
-    }, 100);
-
-    return () => {
-      clearTimeout(timeoutId);
-      observer.disconnect();
+        }
+      }
+      setActiveTab(newActiveIndex);
     };
+
+    window.addEventListener("scroll", handleScroll);
+    // Initial check
+    setTimeout(handleScroll, 100);
+
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   return (
-    <>
-      {/* ═══════════════ SVG FILTER (dynamic from Liquid Glass) ═══════════════ */}
-      <svg
-        width="0"
-        height="0"
-        aria-hidden="true"
-        style={{ position: "absolute", pointerEvents: "none" }}
-        colorInterpolationFilters="sRGB"
-      >
-        <defs>
-          {filterData ? (
-            <filter id="liquid-glass-refraction" x="0%" y="0%" width="100%" height="100%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation={blurAmount} result="blurred_source" />
-              <feImage href={filterData.dispUrl} x="0" y="0" width={filterData.w} height={filterData.h} result="disp_map" />
-              <feDisplacementMap
-                in="blurred_source"
-                in2="disp_map"
-                scale={filterData.scale}
-                xChannelSelector="R"
-                yChannelSelector="G"
-                result="displaced"
-              />
-              <feColorMatrix in="displaced" type="saturate" values={String(specularSaturation)} result="displaced_sat" />
-              <feImage href={filterData.specUrl} x="0" y="0" width={filterData.w} height={filterData.h} result="spec_layer" />
-              <feComposite in="displaced_sat" in2="spec_layer" operator="in" result="spec_masked" />
-              <feComponentTransfer in="spec_layer" result="spec_faded">
-                <feFuncA type="linear" slope={specularOpacity} />
-              </feComponentTransfer>
-              <feBlend in="spec_masked" in2="displaced" mode="normal" result="with_sat" />
-              <feBlend in="spec_faded" in2="with_sat" mode="normal" />
-            </filter>
-          ) : null}
-
-        </defs>
-      </svg>
-
-      {/* ═══════════════ NAVBAR ═══════════════ */}
+    <div className="fixed top-[16px] md:top-[24px] left-0 right-0 z-50 flex justify-center pointer-events-none">
       <motion.nav
-        initial={{ y: -50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className="fixed left-1/2 -translate-x-1/2 top-[16px] md:top-[24px] z-50 flex items-center gap-[16px]"
+        style={{
+          paddingLeft: navPadding,
+          paddingRight: navPadding,
+        }}
+        className="flex justify-center items-center w-full max-w-[1400px] pointer-events-auto"
       >
-        {/* ──────── LEFT GROUP: PlatterView (Tab Bar) ──────── */}
-        <div className="relative rounded-[999px] shadow-none">
-          {/* 
-            Layer 1: LiquidLensBackdropView
-            The frosted blur layer that refracts content behind it.
-          */}
-          <div
-            ref={backdropRef}
-            className="absolute inset-0 rounded-[999px]"
-            style={{
-              // Fallback to standard blur before canvas calculates displacement map
-              backdropFilter: filterData ? "url(#liquid-glass-refraction)" : "blur(20px)",
-              WebkitBackdropFilter: filterData ? "url(#liquid-glass-refraction)" : "blur(20px)",
-              willChange: "transform, backdrop-filter",
-              transform: "translateZ(0)",
-              isolation: "isolate",
-            }}
-          />
+        {/* ──────── LEFT GROUP: Tab Bar ──────── */}
+        <motion.div 
+          style={{
+            backgroundColor: groupBg,
+            padding: groupPadding,
+          }}
+          className="relative flex items-center gap-[4px] md:gap-[15px] rounded-[999px]"
+        >
+          {tabs.map((tab, i) => (
+            <NavButton 
+              key={tab.id}
+              tab={tab}
+              isActive={i === activeTab}
+              isScrolled={isScrolled}
+              effectiveScroll={effectiveScroll}
+              onClick={() => handleTabClick(i)}
+            />
+          ))}
+        </motion.div>
 
-          {/* 
-            Layer 1.5: Tint Layer 
-            Subtle color overlay + inner shadow for glass reflection
-          */}
-          <div
-            className="absolute inset-0 rounded-[999px] pointer-events-none z-[1]"
-            style={{
-              backgroundColor: "rgba(255, 255, 255, 0.06)",
-              boxShadow: "inset 0 0 20px -5px rgba(255, 255, 255, 0.45)",
-            }}
-          />
+        {!isMobile && (
+          <>
+            {/* ──────── SPACER ──────── */}
+            <motion.div style={{ flexGrow: spacerFlex, minWidth: "16px" }} />
 
-          {/* 
-            Layer 3: ContentView  
-            The actual tab buttons. No filter, no blur — 100% crisp text.
-          */}
-          <div className="relative z-10 flex items-center gap-[15px] p-[8px]">
-            {tabs.map((tab, i) => (
-              <button
-                key={tab.id}
-                onClick={() => handleTabClick(i)}
-                className={[
-                  "flex items-center justify-center gap-[8px]",
-                  "px-[14px] py-[8px] rounded-[999px]",
-                  "font-['Inter'] font-medium text-[14px] leading-[20px]",
-                  "text-[#f1f5f9] whitespace-nowrap",
-                  "transition-colors duration-200 cursor-pointer",
-                  i === activeTab
-                    ? "bg-[rgba(248,250,252,0.25)]"
-                    : "bg-transparent drop-shadow-[0px_1px_1px_rgba(16,24,40,0.0)] hover:bg-[rgba(248,250,252,0.10)]",
-                ].join(" ")}
+            {/* ──────── RIGHT GROUP: CTA Button ──────── */}
+            <motion.div 
+              style={{
+                backgroundColor: groupBg,
+                padding: groupPadding,
+              }}
+              className="flex items-center rounded-[999px]"
+            >
+              <motion.button
+                style={{
+                  backgroundColor: ctaBg,
+                  color: ctaColor,
+                  paddingLeft: ctaPaddingSide,
+                  paddingRight: ctaPaddingSide,
+                  paddingTop: "8px",
+                  paddingBottom: "8px",
+                  gap: ctaGap,
+                }}
+                whileHover={
+                  isScrolled 
+                    ? { color: "rgb(15, 23, 42)" } 
+                    : { backgroundColor: "rgb(226, 232, 240)" }
+                }
+                className="flex items-center justify-center rounded-[999px] font-['Inter'] font-medium text-[14px] leading-[20px] whitespace-nowrap cursor-pointer transition-colors duration-200 group"
               >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* ──────── RIGHT GROUP: CTA Button ──────── */}
-        <div className="hidden md:flex items-center p-[8px]">
-          <button
-            className={[
-              "flex items-center justify-center gap-[8px]",
-              "px-[14px] py-[8px] rounded-[999px]",
-              "bg-[#f1f5f9] border border-[#f1f5f9]",
-              "shadow-none",
-              "font-['Inter'] font-medium text-[14px] leading-[20px]",
-              "text-[#334155] whitespace-nowrap",
-              "hover:bg-white transition-colors duration-200 cursor-pointer",
-              "group",
-            ].join(" ")}
-          >
-            Lets talk
-            <ArrowUpRight className="w-[20px] h-[20px] text-[#334155] group-hover:translate-x-[2px] group-hover:-translate-y-[2px] transition-transform duration-200" />
-          </button>
-        </div>
+                <motion.span 
+                  style={{ 
+                    width: ctaTextWidth,
+                    opacity: ctaTextOpacity,
+                    overflow: "hidden", 
+                    display: "block",
+                    whiteSpace: "nowrap"
+                  }}
+                >
+                  Let's talk
+                </motion.span>
+                <motion.div>
+                  <ArrowUpRight className="w-[20px] h-[20px] group-hover:translate-x-[2px] group-hover:-translate-y-[2px] transition-transform duration-200" />
+                </motion.div>
+              </motion.button>
+            </motion.div>
+          </>
+        )}
       </motion.nav>
-    </>
+    </div>
   );
 }

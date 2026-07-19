@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, Variants, useScroll, useTransform, useSpring } from "framer-motion";
+import { ScrambleText } from "./ScrambleText";
 import { Button } from "./ui/Button";
 import { ChevronDown, ArrowUpRight } from "lucide-react";
 
@@ -9,6 +10,17 @@ export function Hero() {
 
   // Creates a subtle parallax effect: as user scrolls down by 1000px, this section moves down by 900px
   const rawY = useTransform(scrollY, [0, 1000], [0, 900]);
+  
+  // Apply spring physics to make the parallax stable and smooth
+  const springY = useSpring(rawY, { stiffness: 400, damping: 90 });
+
+  // Disable parallax on mobile to prevent jittering / rough scroll
+  const y = useTransform(springY, (val) => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      return 0;
+    }
+    return val;
+  });
 
   // Stagger variants for the main text elements
   const containerVariants: Variants = {
@@ -35,8 +47,8 @@ export function Hero() {
     // Mobile: Auto height with balanced padding so the hill image is visible in the first frame
     // Desktop: auto height
     <motion.section
-      style={{ y: rawY }}
-      className="relative w-full pt-[180px] md:pt-[300px] pb-[150px] md:pb-[50px] lg:pb-[70px] flex flex-col items-center justify-center md:justify-start z-0 will-change-transform"
+      style={{ y }}
+      className="relative flex-1 md:flex-none w-full pt-[100px] md:pt-[300px] pb-[60px] md:pb-[50px] lg:pb-[70px] flex flex-col items-center justify-center md:justify-start z-0 will-change-transform"
     >
 
       {/* Decorative Parallax Background Elements */}
@@ -55,7 +67,7 @@ export function Hero() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="relative z-10 flex flex-col items-center justify-center gap-[17px] md:gap-[32px] px-4 md:px-6"
+        className="relative z-10 flex flex-col items-center justify-center gap-[12px] md:gap-[32px] px-4 md:px-6"
       >
         {/* Text block */}
         <motion.div variants={itemVariants} className="flex flex-col gap-[4px] md:gap-[8px] items-center text-center tracking-[0.33px] md:tracking-[0.6px]">
@@ -64,8 +76,8 @@ export function Hero() {
             Hi, Im <span className="font-semibold">Safwan Piliang!</span>
           </p>
 
-          {/* Figma mobile: 48px stacked column / Desktop: 64px inline wrap */}
-          <div className="flex flex-col md:flex-row md:flex-wrap justify-center gap-x-[12px] gap-y-[3px] md:gap-y-[4px] items-center text-[48px] md:text-[48px] lg:text-[72px] text-slate-100 tracking-[0.2px]">
+          {/* Mobile: scaled down to 36px, Desktop: 64/72px */}
+          <div className="flex flex-col md:flex-row md:flex-wrap justify-center gap-x-[12px] gap-y-[3px] md:gap-y-[4px] items-center text-[36px] md:text-[48px] lg:text-[72px] text-slate-100 tracking-[0.2px]">
             <motion.p
               whileHover={{ scale: 1.05, rotate: -2 }}
               className="font-montserrat font-bold cursor-default leading-[1.2]"
@@ -76,7 +88,7 @@ export function Hero() {
               whileHover={{ scale: 1.05, rotate: 2 }}
               className="font-doto font-black cursor-default text-white leading-[1.2]"
             >
-              Digital
+              <ScrambleText text="Digital" />
             </motion.p>
             <motion.p
               whileHover={{ scale: 1.05, rotate: -1 }}
@@ -86,13 +98,13 @@ export function Hero() {
             </motion.p>
           </div>
 
-          {/* Figma mobile: 16px / Desktop: 36px */}
+          {/* Mobile: 16px / Desktop: 36px */}
           <p className="font-montserrat font-medium text-[16px] md:text-[24px] lg:text-[36px] text-slate-100 tracking-[0.2px]">
             across <span className="font-semibold">UI</span>, <span className="font-semibold">Graphic Design</span>, and <span className="font-semibold">3D</span>
           </p>
         </motion.div>
 
-        {/* Figma mobile: buttons full-width, stacked vertically, gap-[10px] */}
+        {/* Buttons */}
         <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:flex-wrap justify-center gap-[10px] md:gap-[16px] w-full max-w-[283px] md:max-w-none md:w-auto">
           <Button variant="white" icon={ChevronDown} className="w-full md:w-auto justify-center">
             Explore My Work
